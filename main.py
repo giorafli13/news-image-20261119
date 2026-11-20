@@ -1,30 +1,33 @@
 #!/usr/bin/env python3
-"""Entry program for the make.fun news-image-20261119 competition.
+"""Entry program for make.fun news-image-20261119.
 
-It places the front-page image that sums up the world news of Thursday
-19 November 2026 into the output directory the grader provides
-(MAKEFUN_OUTPUT_DIR, or /output inside the grading container).
+It drops the bundled front-page image (entry.png — the world news of
+Thursday 19 November 2026) into the output directory the grader hands
+us, through MAKEFUN_OUTPUT_DIR or /output in the grading container.
 
-Standard library only, no network, fully deterministic: the same bundled
-image always produces the same output bytes.
+Python 3.13 standard library only. No network. Deterministic: the same
+bundled file always yields the same output bytes.
 """
 
 import os
-import shutil
+from pathlib import Path
 
 
 def main():
-    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
-    os.makedirs(out_dir, exist_ok=True)
-    here = os.path.dirname(os.path.abspath(__file__))
-    src = os.path.join(here, "entry.png")
-    dst = os.path.join(out_dir, "entry.png")
-    shutil.copyfile(src, dst)
-    # The grader runs this twice and requires identical bytes, so make sure
-    # the copy landed whole before reporting success. A byte-for-byte copy
-    # of a fixed file is deterministic by construction.
-    assert os.path.getsize(dst) == os.path.getsize(src), "copy incomplete"
-    print("wrote %s (%d bytes)" % (dst, os.path.getsize(dst)))
+    out_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    here = Path(__file__).resolve().parent
+    source = here / "entry.png"
+    target = out_dir / "entry.png"
+    if not source.is_file():
+        raise SystemExit("bundled entry.png is missing")
+    payload = source.read_bytes()
+    target.write_bytes(payload)
+    # The grader runs this twice and wants identical bytes both times.
+    # A straight copy of a fixed file is deterministic by construction,
+    # but confirm the write landed whole before we report success.
+    assert target.stat().st_size == len(payload), "copy incomplete"
+    print("wrote %s (%d bytes)" % (target, len(payload)))
 
 
 if __name__ == "__main__":
